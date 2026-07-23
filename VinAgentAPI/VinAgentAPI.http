@@ -1,0 +1,6 @@
+@VinAgentAPI_HostAddress = http://localhost:5138
+
+GET {{VinAgentAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
