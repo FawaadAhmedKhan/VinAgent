@@ -1,5 +1,4 @@
 name: Build ASP.NET Core API
-run: docker build -t vehicleapi:${{ github.sha }} .
 
 on:
   push:
@@ -34,3 +33,6 @@ jobs:
 
     - name: Run Tests
       run: dotnet test --no-build
+      
+    - name: Build Docker Image
+      run: docker build -t vehicleapi:${{ github.sha }} .
