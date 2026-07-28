@@ -1,4 +1,5 @@
 name: Build ASP.NET Core API
+run: docker build -t vehicleapi:${{ github.sha }} .
 
 on:
   push:
