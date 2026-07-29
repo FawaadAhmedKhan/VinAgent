@@ -36,3 +36,27 @@ jobs:
       
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
+
+    # Azure Login
+    - name: Login to Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    # Login to Azure Container Registry
+    - name: Login to ACR
+      run: |
+        az acr login --name edata
+
+    # Tag the image
+    - name: Tag Docker Image
+      run: |
+        docker tag vehicleapi:${{ github.sha }} \
+        edata.azurecr.io/vehicleapi:${{ github.sha }}
+
+    # Push the image
+    - name: Push Docker Image
+      run: |
+        docker push edata.azurecr.io/vehicleapi:${{ github.sha }}
