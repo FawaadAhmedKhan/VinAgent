@@ -43,10 +43,12 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+
     # Login to Azure Container Registry
     - name: Login to ACR
       run: |
         az acr login --name edata
+
 
     # Tag the image
     - name: Tag Docker Image
