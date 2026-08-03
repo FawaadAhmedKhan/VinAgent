@@ -18,7 +18,7 @@ namespace VinAgentAPI.Controllers
         public string Get()
         {
 
-            return "This is VIN data to be displayed";
+            return "This is VIN data to be displayed.";
 
         }
     }
