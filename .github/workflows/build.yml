@@ -44,7 +44,7 @@ jobs:
     # Dependency Vulnerability Scan
     - name: Dependency Vulnerability Scan
       run: |
-        dotnet list package --vulnerable --include-transitive
+        dotnet list package --vulnerable --include-transitive          
       
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
