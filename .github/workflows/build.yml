@@ -53,8 +53,9 @@ jobs:
 
     # Docker Image Scan
     - name: Scan Docker Image
-      uses: aquasecurity/trivy-action@v0.30.0
+      uses: aquasecurity/trivy-action@v0.35.0   # Updated to a safe, restored version
       with:
+        scan-type: 'image'                     # Required by newer versions of the action
         image-ref: vehicleapi:${{ github.sha }}
         severity: CRITICAL,HIGH
         ignore-unfixed: true
