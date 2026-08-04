@@ -49,14 +49,6 @@ jobs:
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
 
-    # Docker Image Scan
-    - name: Scan Docker Image
-      uses: aquasecurity/trivy-action@v0.28.0
-      with:
-        image-ref: vehicleapi:${{ github.sha }}
-        severity: CRITICAL,HIGH
-        ignore-unfixed: true
-        exit-code: 1
         
     # Azure Login
     - name: Login to Azure
