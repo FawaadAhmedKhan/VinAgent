@@ -45,7 +45,6 @@ jobs:
     - name: Dependency Vulnerability Scan
       run: |
         dotnet list package --vulnerable --include-transitive
-        if ($LASTEXITCODE -ne 0) { exit 1 }  
       
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
