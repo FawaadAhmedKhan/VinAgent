@@ -49,6 +49,8 @@ jobs:
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
 
+
+
     # Docker Image Scan
     - name: Scan Docker Image
       uses: aquasecurity/trivy-action@v0.28.0
