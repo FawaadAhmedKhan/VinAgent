@@ -34,9 +34,30 @@ jobs:
     - name: Run Tests
       run: dotnet test --no-build
       
+    # Static Code Analysis
+    #- name: SonarQube Analysis
+    #  uses: SonarSource/sonarqube-scan-action@v5
+    #  env:
+    #   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #   SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+    # Dependency Vulnerability Scan
+    - name: Dependency Vulnerability Scan
+      run: |
+        dotnet list package --vulnerable --include-transitive
+        if ($LASTEXITCODE -ne 0) { exit 1 }  
+      
     - name: Build Docker Image
       run: docker build -t vehicleapi:${{ github.sha }} .
 
+    # Docker Image Scan
+    - name: Scan Docker Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: vehicle-api:${{ github.sha }}
+        severity: CRITICAL,HIGH
+        exit-code: 1
+        
     # Azure Login
     - name: Login to Azure
       uses: azure/login@v2
