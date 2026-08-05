@@ -17,7 +17,7 @@ namespace VinAgentAPI.Controllers
         [HttpGet(Name = "GetVin")]
         public string Get()
         {
-            return "This is VINs data to be displayed. Added docker image scan..";
+            return "This is VINs data to be displayed. Added docker image scan. Slot deployment.";
         }
     }
 }
