@@ -1,22 +1,17 @@
 name: Deploy QA
 
 on:
-  workflow_run:
-    workflows:
-      - Build ASP.NET Core API
-    types:
-      - completed
+  push:
+    branches:
+      - develop
 
 jobs:
 
   deploy-qa:
 
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     runs-on: ubuntu-latest
 
-    environment:
-      name: QA
+    environment: QA
 
     steps:
 
@@ -25,10 +20,9 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-
     - name: Deploy Image to QA Slot
       uses: azure/webapps-deploy@v3
       with:
         app-name: vinagent-api
         slot-name: QA
-        images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
+        images: edata.azurecr.io/vehicleapi:${{ github.sha }}
