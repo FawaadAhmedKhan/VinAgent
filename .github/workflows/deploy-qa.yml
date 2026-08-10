@@ -24,7 +24,7 @@ jobs:
         run: az webapp show --name vinagent-api --resource-group vinagent-api_group
 
       - name: Check QA Slot
-        run: az webapp deployment slot list --name vinagent-api --resource-group vinagent-api_group --output table
+        run: az webapp show --name vinagent-api --resource-group vinagent-api_group --slot qa --query "{name:name, slot:slot}" --output json
 
       - name: Deploy Image to QA Slot
         uses: azure/webapps-deploy@v3
