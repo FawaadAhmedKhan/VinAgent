@@ -5,82 +5,74 @@ on:
     branches:
       - develop
 
+  push:
+    branches:
+      - develop
+
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
+      - name: Restore Packages
+        run: dotnet restore
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Build Application
+        run: dotnet build --no-restore
 
+      - name: Run Tests
+        run: dotnet test --no-build
 
-    - name: Restore Packages
-      run: dotnet restore
+      # Dependency Vulnerability Scan
+      - name: Dependency Vulnerability Scan
+        run: |
+          dotnet list package --vulnerable --include-transitive
 
+      # Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t vehicleapi:${{ github.sha }} .
 
-    - name: Build Application
-      run: dotnet build --no-restore
+      # Docker Image Scan
+      - name: Scan Docker Image
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: image
+          image-ref: vehicleapi:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 0
 
+      # Login to Azure only after merge to develop
+      - name: Login to Azure
+        if: github.event_name == 'push'
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Run Tests
-      run: dotnet test --no-build
-      
-    # Static Code Analysis
-    #- name: SonarQube Analysis
-    #  uses: SonarSource/sonarqube-scan-action@v5
-    #  env:
-    #   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #   SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      # Login to ACR only after merge to develop
+      - name: Login to ACR
+        if: github.event_name == 'push'
+        run: |
+          az acr login --name edata
 
-    # Dependency Vulnerability Scan
-    - name: Dependency Vulnerability Scan
-      run: |
-        dotnet list package --vulnerable --include-transitive          
-      
-    - name: Build Docker Image
-      run: docker build -t vehicleapi:${{ github.sha }} .
+      # Tag Docker Image
+      - name: Tag Docker Image
+        if: github.event_name == 'push'
+        run: |
+          docker tag vehicleapi:${{ github.sha }} \
+            edata.azurecr.io/vehicleapi:${{ github.sha }}
 
-
-
-    # Docker Image Scan
-    - name: Scan Docker Image
-      uses: aquasecurity/trivy-action@v0.35.0   # Updated to a safe, restored version
-      with:
-        scan-type: 'image'                     # Required by newer versions of the action
-        image-ref: vehicleapi:${{ github.sha }}
-        severity: CRITICAL,HIGH
-        ignore-unfixed: true
-        exit-code: 0
-        
-    # Azure Login
-    - name: Login to Azure
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-
-    # Login to Azure Container Registry
-    - name: Login to ACR
-      run: |
-        az acr login --name edata
-
-
-    # Tag the image
-    - name: Tag Docker Image
-      run: |
-        docker tag vehicleapi:${{ github.sha }} \
-        edata.azurecr.io/vehicleapi:${{ github.sha }}
-
-    # Push the image
-    - name: Push Docker Image
-      run: |
-        docker push edata.azurecr.io/vehicleapi:${{ github.sha }}
+      # Push Docker Image
+      - name: Push Docker Image
+        if: github.event_name == 'push'
+        run: |
+          docker push edata.azurecr.io/vehicleapi:${{ github.sha }}
