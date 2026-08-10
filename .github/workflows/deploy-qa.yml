@@ -6,33 +6,36 @@ on:
       - develop
 
 jobs:
-
   deploy-qa:
-
     runs-on: ubuntu-latest
-
     environment: QA
 
     steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Login to Azure
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Check Azure Account
-      run: |
-        az account show
-        az webapp show 
-          --name vinagent-api 
-          --resource-group vinagent-api_group
-        az webapp deployment slot list 
-          --name vinagent-api 
-          --resource-group vinagent-api_group
-          
-    - name: Deploy Image to QA Slot
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: vinagent-api
-        slot-name: qa
-        images: edata.azurecr.io/vehicleapi:${{ github.sha }}
+      - name: Check Azure Account
+        run: |
+          az account show
+
+      - name: Check App Service
+        run: |
+          az webapp show 
+            --name vinagent-api 
+            --resource-group vinagent-api_group
+
+      - name: Check QA Slot
+        run: |
+          az webapp deployment slot list 
+            --name vinagent-api 
+            --resource-group vinagent-api_group 
+            --output table
+
+      - name: Deploy Image to QA Slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: vinagent-api
+          slot-name: qa
+          images: edata.azurecr.io/vehicleapi:${{ github.sha }}
