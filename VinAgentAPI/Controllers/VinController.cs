@@ -19,5 +19,11 @@ namespace VinAgentAPI.Controllers
         {
             return "Deploy to QA slot";
         }
+
+        [HttpGet(Name = "DetailsByVIN")]
+        public string DetailsByVIN(string vin)
+        {
+            return "This is the VIN: "+ vin;
+        }
     }
 }
