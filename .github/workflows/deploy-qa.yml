@@ -17,15 +17,47 @@ jobs:
     environment: QA
 
     steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Login to Azure
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy Image to QA Slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: vinagent-api
+          slot-name: qa
+          images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
 
-    - name: Deploy Image to QA Slot
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: vinagent-api
-        slot-name: qa
-        images: edata.azurecr.io/vehicleapi:${{ github.sha }}
+      - name: Health Check
+        run: |
+          echo "Waiting for QA application to start..."
+          sleep 20
+
+          echo "Checking QA health endpoint..."
+
+          curl --fail \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/health
+
+          echo "QA Health Check passed."
+
+      - name: Smoke Test QA API
+        run: |
+          URL="https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
+
+          echo "Running smoke test..."
+
+          STATUS=$(curl -s -o response.json -w "%{http_code}" "$URL")
+
+          echo "HTTP Status: $STATUS"
+          cat response.json
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Smoke test failed."
+            exit 1
+          fi
+
+          echo "Smoke test passed."
