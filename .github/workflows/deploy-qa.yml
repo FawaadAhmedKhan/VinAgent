@@ -46,7 +46,7 @@ jobs:
 
       - name: Smoke Test QA API
         run: |
-          URL="https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/api/Vehicle/DetailsByVin?vin=YOUR_TEST_VIN"
+          URL="https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/api/Vehicle/DetailsByVIN?vin=YOUR_TEST_VIN"
 
           echo "Running smoke test..."
 
