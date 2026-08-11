@@ -20,26 +20,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Check Azure Account
-        run: |
-          az account show
-
-      - name: Check App Service
-        run: |
-          az webapp show \
-            --name vinagent-api \
-            --resource-group vinagent-api_group
-
-      - name: Check QA Slot
-        run: |
-          az webapp show \
-            --name vinagent-api \
-            --resource-group vinagent-api_group \
-            --slot qa \
-            --query "{name:name, slot:slot}" \
-            --output json
+          creds: ${{ secrets.AZURE_CREDENTIALS }}      
 
       - name: Deploy Image to QA Slot
         uses: azure/webapps-deploy@v3
@@ -47,3 +28,18 @@ jobs:
           app-name: vinagent-api
           slot-name: qa
           images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
+
+      - name: Health Check
+        run: |
+          echo "Waiting for QA application to start..."
+          sleep 20
+
+          echo "Checking QA health endpoint..."
+
+          curl --fail \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/health
+
+          echo "QA Health Check passed."          
