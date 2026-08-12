@@ -29,13 +29,12 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Run Tests
-        run: dotnet test --no-build
+        run: dotnet test VinAgent.Tests/VinAgent.Tests.csproj --no-build
 
       # Dependency Vulnerability Scan
       - name: Dependency Vulnerability Scan
         run: |
           dotnet list package --vulnerable --include-transitive
-
 
       # Build Docker Image
       - name: Build Docker Image
