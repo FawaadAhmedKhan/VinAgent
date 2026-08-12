@@ -1,0 +1,44 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag that passed QA"
+        required: true
+        type: string
+
+jobs:
+
+  deploy-production:
+
+    runs-on: ubuntu-latest
+
+    environment:
+      name: Production
+
+    steps:
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Show Image
+        run: |
+          echo "Deploying:"
+          echo "edata.azurecr.io/vehicleapi:${{ inputs.image_tag }}"
+
+      - name: Deploy Image to Production
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: vinagent-api
+          images: edata.azurecr.io/vehicleapi:${{ inputs.image_tag }}
+
+      - name: Wait for Production Startup
+        run: sleep 30
+
+      - name: Production Health Check
+        run: |
+          curl --fail --retry 5 --retry-delay 10 \
+            https://vinagent-api.azurewebsites.net/health
