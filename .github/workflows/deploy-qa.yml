@@ -61,3 +61,10 @@ jobs:
           fi
 
           echo "Smoke test passed."
+          
+      - name: API Integration Test
+        env:
+          API_BASE_URL: https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net
+        run: |
+          dotnet test VinAgent.IntegrationTests/VinAgent.IntegrationTests.csproj \
+            --configuration Release          
