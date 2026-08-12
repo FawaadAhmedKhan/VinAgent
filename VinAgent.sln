@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VinAgentAPI", "VinAgentAPI\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VinAgent.Tests", "VinAgent.Tests\VinAgent.Tests.csproj", "{C9EFAB70-7BF3-4122-9C74-5C6825D4DB73}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegrationTests", "IntegrationTests\IntegrationTests.csproj", "{59FDAA84-6701-32D0-9E5C-CA30D0B3B987}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{C9EFAB70-7BF3-4122-9C74-5C6825D4DB73}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9EFAB70-7BF3-4122-9C74-5C6825D4DB73}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9EFAB70-7BF3-4122-9C74-5C6825D4DB73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59FDAA84-6701-32D0-9E5C-CA30D0B3B987}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59FDAA84-6701-32D0-9E5C-CA30D0B3B987}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59FDAA84-6701-32D0-9E5C-CA30D0B3B987}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59FDAA84-6701-32D0-9E5C-CA30D0B3B987}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
