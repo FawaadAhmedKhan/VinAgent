@@ -1,0 +1,142 @@
+name: Deploy Production
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy QA
+    types:
+      - completed
+    branches:
+      - develop
+
+jobs:
+
+  # ==========================================
+  # 1. Deploy same QA-tested image to staging
+  # ==========================================
+  deploy-staging:
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-latest
+
+    environment: Production
+
+    steps:
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Image to Staging
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: vinagent-api
+          slot-name: staging
+          images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
+
+      - name: Staging Health Check
+        run: |
+          echo "Waiting for staging application..."
+          sleep 20
+
+          echo "Checking staging health endpoint..."
+
+          curl --fail \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://vinagent-api-staging-c6dae4bze9c9cpcu.westeurope-01.azurewebsites.net/health
+
+          echo "Staging Health Check passed."
+
+      - name: Staging Smoke Test
+        run: |
+          URL="https://vinagent-api-staging-c6dae4bze9c9cpcu.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
+
+          echo "Running staging smoke test..."
+
+          STATUS=$(curl -s -o response.json -w "%{http_code}" "$URL")
+
+          echo "HTTP Status: $STATUS"
+
+          cat response.json
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Staging smoke test failed."
+            exit 1
+          fi
+
+          echo "Staging smoke test passed."
+
+
+  # ==========================================
+  # 2. Swap staging → Production
+  # ==========================================
+  swap-production:
+
+    needs: deploy-staging
+
+    runs-on: ubuntu-latest
+
+    environment: Production-Swap
+
+    steps:
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap Staging to Production
+        run: |
+          az webapp deployment slot swap \
+            --name vinagent-api \
+            --resource-group vinagent-api_group \
+            --slot staging \
+            --target-slot production
+
+          echo "Staging successfully swapped to Production."
+
+
+      # ==========================================
+      # 3. Production Health Check
+      # ==========================================
+      - name: Production Health Check
+        run: |
+          echo "Waiting for production application..."
+          sleep 20
+
+          echo "Checking production health endpoint..."
+
+          curl --fail \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            https://vinagent-api-fdaqbubka5a3hvgj.westeurope-01.azurewebsites.net/health
+
+          echo "Production Health Check passed."
+
+
+      # ==========================================
+      # 4. Production Smoke Test
+      # ==========================================
+      - name: Production Smoke Test
+        run: |
+          URL="https://vinagent-api-fdaqbubka5a3hvgj.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
+
+          echo "Running production smoke test..."
+
+          STATUS=$(curl -s -o response.json -w "%{http_code}" "$URL")
+
+          echo "HTTP Status: $STATUS"
+
+          cat response.json
+
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Production smoke test failed."
+            exit 1
+          fi
+
+          echo "Production smoke test passed."
