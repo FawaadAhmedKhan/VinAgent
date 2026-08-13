@@ -58,20 +58,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Show Azure Context
-      if: github.event_name == 'push'
-      run: |
-        az account show \
-          --query "{subscription:name,subscriptionId:id,tenantId:tenantId}" \
-          -o table
+      - name: Show Azure Context
+        if: github.event_name == 'push'
+        run: |
+          az account show \
+            --query "{subscription:name,subscriptionId:id,tenantId:tenantId}" \
+            -o table
 
-    - name: Show ACR
-      if: github.event_name == 'push'
-      run: |
-        az acr show \
-          --name edata \
-          --query "{name:name,id:id,loginServer:loginServer,resourceGroup:resourceGroup}" \
-          -o table
+      - name: Show ACR
+        if: github.event_name == 'push'
+        run: |
+          az acr show \
+            --name edata \
+            --query "{name:name,id:id,loginServer:loginServer,resourceGroup:resourceGroup}" \
+            -o table
 
       # Login to ACR only after merge to develop
       - name: Login to ACR
