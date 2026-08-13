@@ -35,7 +35,20 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-          
+      
+      - name: Show Azure Context
+        run: |
+          az account show \
+            --query "{subscription:name,subscriptionId:id,tenantId:tenantId}" \
+            -o table
+
+      - name: Show ACR
+        run: |
+          az acr show \
+            --name edata \
+            --query "{name:name,id:id,loginServer:loginServer}" \
+            -o table
+      
       # Deploy the exact image created by Build
       - name: Deploy Image to QA Slot
         uses: azure/webapps-deploy@v3
