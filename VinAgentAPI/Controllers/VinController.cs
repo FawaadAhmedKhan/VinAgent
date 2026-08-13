@@ -23,6 +23,12 @@ namespace VinAgentAPI.Controllers
         public string DetailsByVIN(string vin)
         {
             return "This is the VIN ok: " + vin;
-        }       
+        }
+
+        [HttpGet("Valuation")]
+        public string Valuation()
+        {
+            return "Valuation is: aed 3000";
+        }
     }
 }
