@@ -3,7 +3,7 @@ name: Deploy QA
 on:
   workflow_run:
     workflows:
-      - Build ASP.NET Core API
+      - Build ASP.NET Core API  
     types:
       - completed
     branches:
@@ -17,11 +17,39 @@ jobs:
     environment: QA
 
     steps:
+    
+      # Checkout the exact source commit that was built
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      # Setup .NET for integration tests
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      
+      # Login to Azure      
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Show Azure Context
+        run: |
+          az account show \
+            --query "{subscription:name,subscriptionId:id,tenantId:tenantId}" \
+            -o table
 
+      - name: Show ACR
+        run: |
+          az acr show \
+            --name edata \
+            --query "{name:name,id:id,loginServer:loginServer}" \
+            -o table
+      
+      # Deploy the exact image created by Build
       - name: Deploy Image to QA Slot
         uses: azure/webapps-deploy@v3
         with:
@@ -29,6 +57,7 @@ jobs:
           slot-name: qa
           images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
 
+      # Health Check
       - name: Health Check
         run: |
           echo "Waiting for QA application to start..."
@@ -44,6 +73,7 @@ jobs:
 
           echo "QA Health Check passed."
 
+      # Smoke Test
       - name: Smoke Test QA API
         run: |
           URL="https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
@@ -61,3 +91,11 @@ jobs:
           fi
 
           echo "Smoke test passed."
+      
+      # API Integration Test      
+      - name: API Integration Test
+        env:
+          API_BASE_URL: https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net
+        run: |
+          dotnet test IntegrationTests/IntegrationTests.csproj \
+            --configuration Release          
