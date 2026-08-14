@@ -5,13 +5,15 @@ on:
     workflows:
       - Deploy QA
     types:
-      - completed    
+      - completed
+    branches:
+      - develop
 
 jobs:
 
-  # ==========================================
-  # 1. Deploy same QA-tested image to staging
-  # ==========================================
+  # ==========================================================
+  # 1. Get EXACT image currently deployed to QA
+  # ==========================================================
   deploy-staging:
 
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -22,21 +24,112 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------
+      # Login to Azure
+      # --------------------------------------------------
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy Image to Staging
+      # --------------------------------------------------
+      # Get image currently deployed to QA
+      # --------------------------------------------------
+      - name: Get QA Image
+        run: |
+
+          echo "Reading image currently deployed to QA..."
+
+          QA_IMAGE=$(az webapp config container show \
+            --name vinagent-api \
+            --resource-group vinagent-api_group \
+            --slot qa \
+            --query "[?name=='DOCKER_CUSTOM_IMAGE_NAME'].value | [0]" \
+            -o tsv)
+
+          echo "QA_IMAGE=$QA_IMAGE"
+
+          if [ -z "$QA_IMAGE" ]; then
+            echo "ERROR: Could not determine QA image."
+            exit 1
+          fi
+
+          # Remove DOCKER| prefix if present
+          QA_IMAGE="${QA_IMAGE#DOCKER|}"
+
+          echo "Exact QA image:"
+          echo "$QA_IMAGE"
+
+          echo "QA_IMAGE=$QA_IMAGE" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------
+      # Verify image exists in ACR
+      # --------------------------------------------------
+      - name: Verify QA Image Exists
+        run: |
+
+          echo "Verifying image exists in ACR..."
+
+          IMAGE_NAME="${QA_IMAGE#*/}"
+
+          REPOSITORY="${IMAGE_NAME%%:*}"
+          TAG="${IMAGE_NAME##*:}"
+
+          echo "Repository: $REPOSITORY"
+          echo "Tag: $TAG"
+
+          az acr repository show \
+            --name edata \
+            --image "$REPOSITORY:$TAG"
+
+          echo "QA image exists in ACR."
+
+      # --------------------------------------------------
+      # Deploy EXACT QA image to Staging
+      # --------------------------------------------------
+      - name: Deploy Same QA Image to Staging
         uses: azure/webapps-deploy@v3
         with:
           app-name: vinagent-api
           slot-name: staging
-          images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
+          images: ${{ env.QA_IMAGE }}
 
+      # --------------------------------------------------
+      # Verify staging image
+      # --------------------------------------------------
+      - name: Verify Staging Image
+        run: |
+
+          echo "Image configured on staging:"
+
+          STAGING_IMAGE=$(az webapp config container show \
+            --name vinagent-api \
+            --resource-group vinagent-api_group \
+            --slot staging \
+            --query "[?name=='DOCKER_CUSTOM_IMAGE_NAME'].value | [0]" \
+            -o tsv)
+
+          echo "$STAGING_IMAGE"
+
+          EXPECTED="DOCKER|${QA_IMAGE}"
+
+          if [ "$STAGING_IMAGE" != "$EXPECTED" ] && [ "$STAGING_IMAGE" != "$QA_IMAGE" ]; then
+            echo "ERROR: Staging image does not match QA image."
+            echo "Expected: $EXPECTED"
+            echo "Actual:   $STAGING_IMAGE"
+            exit 1
+          fi
+
+          echo "Staging is using the same image as QA."
+
+      # --------------------------------------------------
+      # Staging Health Check
+      # --------------------------------------------------
       - name: Staging Health Check
         run: |
+
           echo "Waiting for staging application..."
+
           sleep 20
 
           echo "Checking staging health endpoint..."
@@ -49,8 +142,12 @@ jobs:
 
           echo "Staging Health Check passed."
 
+      # --------------------------------------------------
+      # Staging Smoke Test
+      # --------------------------------------------------
       - name: Staging Smoke Test
         run: |
+
           URL="https://vinagent-api-staging-c6dae4bze9c9cpcu.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
 
           echo "Running staging smoke test..."
@@ -69,9 +166,9 @@ jobs:
           echo "Staging smoke test passed."
 
 
-  # ==========================================
-  # 2. Swap staging → Production
-  # ==========================================
+  # ==========================================================
+  # 2. Swap Staging → Production
+  # ==========================================================
   swap-production:
 
     needs: deploy-staging
@@ -82,13 +179,20 @@ jobs:
 
     steps:
 
+      # --------------------------------------------------
+      # Login to Azure
+      # --------------------------------------------------
       - name: Login to Azure
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # --------------------------------------------------
+      # Swap
+      # --------------------------------------------------
       - name: Swap Staging to Production
         run: |
+
           az webapp deployment slot swap \
             --name vinagent-api \
             --resource-group vinagent-api_group \
@@ -97,13 +201,14 @@ jobs:
 
           echo "Staging successfully swapped to Production."
 
-
-      # ==========================================
-      # 3. Production Health Check
-      # ==========================================
+      # --------------------------------------------------
+      # Production Health Check
+      # --------------------------------------------------
       - name: Production Health Check
         run: |
+
           echo "Waiting for production application..."
+
           sleep 20
 
           echo "Checking production health endpoint..."
@@ -116,12 +221,12 @@ jobs:
 
           echo "Production Health Check passed."
 
-
-      # ==========================================
-      # 4. Production Smoke Test
-      # ==========================================
+      # --------------------------------------------------
+      # Production Smoke Test
+      # --------------------------------------------------
       - name: Production Smoke Test
         run: |
+
           URL="https://vinagent-api-fdaqbubka5a3hvgj.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
 
           echo "Running production smoke test..."
