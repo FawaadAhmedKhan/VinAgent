@@ -6,8 +6,6 @@ on:
       - Deploy QA
     types:
       - completed
-    branches:
-      - develop
 
 jobs:
 
