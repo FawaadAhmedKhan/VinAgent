@@ -5,9 +5,7 @@ on:
     workflows:
       - Deploy QA
     types:
-      - completed
-    branches:
-      - develop
+      - completed    
 
 jobs:
 
