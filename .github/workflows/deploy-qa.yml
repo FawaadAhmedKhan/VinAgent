@@ -3,7 +3,7 @@ name: Deploy QA
 on:
   workflow_run:
     workflows:
-      - Build ASP.NET Core API  
+      - Build ASP.NET Core API
     types:
       - completed
     branches:
@@ -12,45 +12,94 @@ on:
 jobs:
   deploy-qa:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     runs-on: ubuntu-latest
 
     environment: QA
 
     steps:
-    
-      # Checkout the exact source commit that was built
+
+      # --------------------------------------------------
+      # Checkout exact source commit that triggered Build
+      # --------------------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Setup .NET for integration tests
+      # --------------------------------------------------
+      # Setup .NET
+      # --------------------------------------------------
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      
-      # Login to Azure      
+
+      # --------------------------------------------------
+      # Login to Azure
+      # --------------------------------------------------
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}      
-    
-      # Deploy the exact image created by Build
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # --------------------------------------------------
+      # Define exact image
+      # --------------------------------------------------
+      - name: Set Docker Image
+        run: |
+          IMAGE="edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}"
+
+          echo "QA image:"
+          echo "$IMAGE"
+
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      # --------------------------------------------------
+      # Verify image exists in ACR
+      # --------------------------------------------------
+      - name: Verify Image Exists
+        run: |
+          echo "Checking image in ACR..."
+
+          az acr repository show \
+            --name edata \
+            --image vehicleapi:${{ github.event.workflow_run.head_sha }}
+
+          echo "Image exists in ACR."
+
+      # --------------------------------------------------
+      # Deploy exact image to QA
+      # --------------------------------------------------
       - name: Deploy Image to QA Slot
         uses: azure/webapps-deploy@v3
         with:
           app-name: vinagent-api
           slot-name: qa
-          images: edata.azurecr.io/vehicleapi:${{ github.event.workflow_run.head_sha }}
+          images: ${{ env.IMAGE }}
 
+      # --------------------------------------------------
+      # Display deployed QA image
+      # --------------------------------------------------
+      - name: Verify QA Image
+        run: |
+          echo "Image configured on QA:"
+
+          az webapp config container show \
+            --name vinagent-api \
+            --resource-group vinagent-api_group \
+            --slot qa \
+            --query "[?name=='DOCKER_CUSTOM_IMAGE_NAME'].value" \
+            -o tsv
+
+      # --------------------------------------------------
       # Health Check
+      # --------------------------------------------------
       - name: Health Check
         run: |
           echo "Waiting for QA application to start..."
-          sleep 20
 
-          echo "Checking QA health endpoint..."
+          sleep 20
 
           curl --fail \
             --retry 10 \
@@ -60,29 +109,34 @@ jobs:
 
           echo "QA Health Check passed."
 
+      # --------------------------------------------------
       # Smoke Test
+      # --------------------------------------------------
       - name: Smoke Test QA API
         run: |
           URL="https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net/Vin/DetailsByVIN?vin=JTJBM7FX4A5005889"
 
-          echo "Running smoke test..."
+          echo "Running QA smoke test..."
 
           STATUS=$(curl -s -o response.json -w "%{http_code}" "$URL")
 
           echo "HTTP Status: $STATUS"
+
           cat response.json
 
           if [ "$STATUS" -ne 200 ]; then
-            echo "Smoke test failed."
+            echo "QA smoke test failed."
             exit 1
           fi
 
-          echo "Smoke test passed."
-      
-      # API Integration Test      
+          echo "QA smoke test passed."
+
+      # --------------------------------------------------
+      # API Integration Test
+      # --------------------------------------------------
       - name: API Integration Test
         env:
           API_BASE_URL: https://vinagent-api-qa-e0fjdzd7bggtafdq.westeurope-01.azurewebsites.net
         run: |
           dotnet test IntegrationTests/IntegrationTests.csproj \
-            --configuration Release          
+            --configuration Release
