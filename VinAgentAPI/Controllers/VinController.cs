@@ -28,7 +28,7 @@ namespace VinAgentAPI.Controllers
         [HttpGet("Valuation")]
         public string Valuation()
         {
-            return "Valuation is: aed 4500";
+            return "Valuation is: aed 4500.";
         }
     }
 }
